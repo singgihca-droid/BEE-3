@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Cloudybear Level Up 🤍</title>
+
+<style>
+body{
+  margin:0;
+  font-family:'Segoe UI',sans-serif;
+  background:linear-gradient(135deg,#ffe4ec,#fff1f6);
+  color:#ff5c8a;
+  overflow:hidden;
+}
+.clouds{
+  position:fixed;
+  inset:0;
+  background:url("https://i.ibb.co/7J2Yk9k/clouds.png") repeat-x;
+  animation:cloud 70s linear infinite;
+  opacity:.25;
+  z-index:-1;
+}
+@keyframes cloud{to{transform:translateX(-50%)}}
+.page{display:none;min-height:100vh;justify-content:center;align-items:center;text-align:center;padding:40px}
+.active{display:flex}
+.card{
+  background:rgba(255,255,255,.9);
+  padding:30px;
+  border-radius:24px;
+  max-width:520px;
+  box-shadow:0 12px 30px rgba(255,92,138,.25);
+}
+button,input{
+  margin-top:15px;
+  padding:10px 20px;
+  border:none;
+  border-radius:20px;
+  font-size:1em;
+}
+button{background:#ff7aa2;color:#fff;cursor:pointer}
+input{width:80%;text-align:center}
+.maze{
+  display:grid;
+  grid-template-columns:repeat(7,45px);
+  gap:5px;
+  justify-content:center;
+}
+.cell{
+  width:45px;height:45px;
+  border-radius:8px;
+  background:#ffe6f0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:20px;
+}
+.wall{background:#ffb6c1}
+.trap{background:#ff6b6b;color:#fff}
+.exit{background:#b2f2bb}
+.confetti{
+  position:fixed;top:-10px;
+  width:10px;height:10px;
+  animation:fall 3s linear forwards;
+}
+@keyframes fall{
+  to{transform:translateY(110vh) rotate(360deg);opacity:0}
+}
+</style>
+</head>
+
+<body>
+<div class="clouds"></div>
+
+<audio autoplay loop>
+  <source src="https://dl.sndup.net/dkpn/Beautiful-Paul.mp3" type="audio/mpeg">
+</audio>
+<audio id="tapSound" src="https://www.soundjay.com/buttons/sounds/button-09.mp3"></audio>
+<audio id="successSound" src="https://www.soundjay.com/human/sounds/children-yay-01.mp3"></audio>
+
+<!-- PAGE 1 -->
+<div class="page active">
+  <div class="card">
+    <h2 id="greet"></h2>
+    <p>aku bisa panggil kamu apa?</p>
+    <input id="loverName" placeholder="Tulis nama kamu 🤍">
+    <button onclick="saveName()">Masuk</button>
+  </div>
+</div>
+
+<!-- PAGE 2 -->
+<div class="page">
+  <div class="card">
+    <h2>🦸 Tebak Siapa aku?</h2>
+    <p id="heroClue"></p>
+    <button onclick="guessHero()">Jawab ☝🏻</button>
+    <p id="heroMsg"></p>
+    <button id="heroNext" style="display:none" onclick="next()">Next ⏭️</button>
+  </div>
+</div>
+
+<!-- PAGE 3 -->
+<div class="page">
+  <div class="card">
+    <h2>🤴 Sebuah Legenda</h2>
+    <p>Bantu Pangeran Singgih temui cintanya yaa 💖</p>
+    <div class="maze" id="maze"></div>
+    <div>
+      <button onclick="move(0,-1)">⬆️</button><br>
+      <button onclick="move(-1,0)">⬅️</button>
+      <button onclick="move(1,0)">➡️</button><br>
+      <button onclick="move(0,1)">⬇️</button>
+    </div>
+    <p id="mazeMsg"></p>
+    <button id="mazeNext" style="display:none" onclick="next()">lanjut yuk 👉🏻</button>
+  </div>
+</div>
+
+<!-- PAGE 4 -->
+<div class="page">
+  <div class="card">
+    <h2>💭 Alkisah Singkat</h2>
+    <p>Perjalanan Pangeran tadi penuh rintangan.<br>Sempat salah jalan, kena jebakan, mulai lagi.</p>
+    <p>Tapi dia terus jalan…<br>karena dia tahu, yang ditujunya itu sangat berharga.</p>
+    <p>Kadang hidup juga gitu.<br>Kalau tujuannya kamu👰🏻‍♀️, rasanya pengen dicoba terus 🤍</p>
+    <button onclick="next()">lanjut lagi 👉🏻</button>
+  </div>
+</div>
+
+<!-- PAGE 5 -->
+<div class="page">
+  <div class="card">
+    <h2>✨ Buat Kamu</h2>
+    <p id="finalMessage"></p>
+    <button onclick="reset()">ulang lagi</button>
+  </div>
+</div>
+
+<script>
+let p = 0;
+let lover = "kamu";
+let playCount = 0;
+
+const pages = document.querySelectorAll('.page');
+const h = new Date().getHours();
+
+document.getElementById("greet").innerText =
+`Hi Cloudybear, Selamat ${h<11?"Pagi":h<15?"Siang":h<18?"Sore":"Malam"} ☁️`;
+
+document.body.addEventListener("click",()=>{
+  document.getElementById("tapSound").play();
+});
+
+function saveName(){
+  lover = document.getElementById("loverName").value || "kamu";
+  next();
+}
+
+const heroes=[
+ {name:"Iron Man",clues:[
+  "Aku Superhero MARVEL, manusia biasa tanpa kekuatan dari lahir.",
+  "Aku Superhero MARVEL, Senjataku teknologi canggih.",
+  "Aku Superhero MARVEL, Aku menyimpan Arc Reactor di dada."
+ ]},
+ {name:"Spider-Man",clues:[
+  "Aku Superhero MARVEL, Kekuataku muncul setelah sebuah gigitan.",
+  "Aku Superhero MARVEL, Aku bergerak lincah dan akrobatik diantara gedung-gedung.",
+  "Aku Superhero MARVEL, Aku dianggap murid oleh Tony Stark."
+ ]},
+ {name:"Captain America",clues:[
+  "Aku Superhero MARVEL, Awalnya tubuhku lemah dan kurus.",
+  "Aku Superhero MARVEL, Aku membawa tameng sebagai senjata.",
+  "Aku Superhero MARVEL, Simbol keadilan dan kepemimpinan."
+ ]},
+ {name:"Thor",clues:[
+  "Aku Superhero MARVEL, Aku bukan dari bumi.",
+  "Aku Superhero MARVEL, Senjata ku bernama Mjolnir.",
+  "Aku Superhero MARVEL, Kekuatan petir ada di tanganku."
+ ]},
+ {name:"Hulk",clues:[
+  "Aku Superhero MARVEL, Saat emosi tubuhku tak terkendali.",
+  "Aku Superhero MARVEL, Tubuhku besar, tahan banting, hijau.",
+  "Aku Superhero MARVEL, Aku ilmuwan jenius, namun memiliki konflik batin."
+ ]},
+ {name:"Black Panther",clues:[
+  "Aku Superhero MARVEL, Aku seorang raja berkulit gelap.",
+  "Aku Superhero MARVEL, Aku berasal dari Wakanda.",
+  "Aku Superhero MARVEL, Aku memakai kostum vibranium."
+ ]},
+ {name:"Doctor Strange",clues:[
+  "Aku Superhero MARVEL, Aku ahli dalam waktu dan dimensi.",
+  "Aku Superhero MARVEL, Aku sering menggunakan mantra.",
+  "Aku Superhero MARVEL, Dulunya aku seorang dokter bedah."
+ ]}
+];
+
+const pickedHero = heroes[Math.floor(Math.random()*heroes.length)];
+let clueIndex = 0;
+document.getElementById("heroClue").innerText = pickedHero.clues[0];
+
+function normalize(str){
+  return str.toLowerCase().replace(/[^a-z]/g,"");
+}
+
+function similarity(a,b){
+  let same=0;
+  for(let c of a){ if(b.includes(c)) same++; }
+  return same/Math.max(a.length,b.length);
+}
+
+function guessHero(){
+  const input = prompt("Siapa superhero ini?");
+  if(!input) return;
+
+  const user = normalize(input);
+  const answer = normalize(pickedHero.name);
+
+  if(user.includes(answer) || similarity(user,answer)>=0.7){
+    heroMsg.innerHTML = `Benar 🤍<br> kamu peka banget,..<br> jadi iri, apa aku harus jadi teka-teki dulu ni.`;
+    heroNext.style.display="inline-block";
+    successSound.play();
+    confetti();
+  }else{
+    clueIndex++;
+    heroMsg.innerText="salah dong… tapi aku yakin kamu pasti bisa 🤏";
+    if(clueIndex<pickedHero.clues.length){
+      heroClue.innerText=pickedHero.clues[clueIndex];
+    }
+  }
+}
+
+const mazeMap=[
+["S","","wall","trap","","",""],
+["wall","","wall","","wall","trap",""],
+["","","","","wall","",""],
+["trap","wall","","wall","","",""],
+["","wall","","","wall","trap",""],
+["","","wall","","","wall",""],
+["","","","trap","","","exit"]
+];
+
+let x=0,y=0;
+
+function drawMaze(){
+  maze.innerHTML="";
+  mazeMap.forEach((r,j)=>r.forEach((c,i)=>{
+    const d=document.createElement("div");
+    d.className="cell "+c;
+    if(i==x&&j==y)d.textContent="🤴";
+    if(c=="exit")d.textContent="👸🏻";
+    if(c=="trap")d.textContent="💥";
+    maze.appendChild(d);
+  }));
+}
+drawMaze();
+
+function move(dx,dy){
+  const nx=x+dx,ny=y+dy;
+  if(nx<0||ny<0||nx>6||ny>6) return;
+  if(mazeMap[ny][nx]=="wall") return;
+
+  x=nx;y=ny;
+
+  if(mazeMap[ny][nx]=="trap"){
+    x=0;y=0;
+    mazeMsg.innerText="Singgih jatuh… tapi bangkit lagi.";
+  }
+  if(mazeMap[ny][nx]=="exit"){
+    mazeMsg.innerText=`Akhirnya Pangeran Singgih bertemu ${lover} 🤍 untuk bisa bahagia 👰🏻‍♀️🤵🏻`;
+    mazeNext.style.display="inline-block";
+    confetti();
+  }
+  drawMaze();
+}
+
+function confetti(){
+  for(let i=0;i<40;i++){
+    const c=document.createElement("div");
+    c.className="confetti";
+    c.style.left=Math.random()*100+"vw";
+    c.style.background=["#ff7aa2","#ffd1dc","#b2f2bb"][Math.floor(Math.random()*3)];
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(),3000);
+  }
+}
+
+const sweetMessages=[
+"Kamu nggak perlu jadi sempurna untuk jadi berharga. Cara kamu bertahan aja sudah cukup bikin bangga 🤍",
+"Kalau hari ini terasa berat, ingat ya… kamu nggak sendirian. Ada versi kamu yang lebih kuat dari yang kamu kira.",
+"Kamu itu unik, bukan karena berbeda, tapi karena caramu tulus walau dunia kadang ribut.",
+"Pelan nggak apa-apa. Yang penting kamu nggak berhenti jadi baik.",
+"Ada hal-hal indah yang datang bukan karena cepat, tapi karena kamu sabar.",
+"Kalau capek, istirahat. Kalau ragu, percaya diri sedikit. Kamu layak dapat hal baik.",
+"Kamu mungkin nggak sadar, tapi kehadiranmu itu menenangkan.",
+"Semoga hari ini kamu sadar: kamu pantas dicintai, tanpa syarat.",
+"Kalau kamu lagi ragu sama diri sendiri… izinkan aku bilang: kamu cukup 🤍",
+"Nggak semua orang punya hati selembut kamu. Tolong jaga itu, ya."
+];
+
+const secretMessages=[
+"Aku perhatiin… kamu balik lagi 🤍 mungkin bukan karena game.",
+"Kalau ini cerita, aku mau kamu jadi ending-nya.",
+"Ada yang spesial dari kamu, dan kamu bahkan nggak sadar itu."
+];
+
+function showFinalMessage(){
+  const list = playCount>=1 ? secretMessages : sweetMessages;
+  finalMessage.innerText = list[Math.floor(Math.random()*list.length)];
+}
+
+function next(){
+  pages[p].classList.remove('active');
+  p++;
+  pages[p].classList.add('active');
+  if(p===pages.length-1) showFinalMessage();
+}
+
+function reset(){
+  playCount++;
+  pages[p].classList.remove('active');
+  p=0;
+  pages[p].classList.add('active');
+}
+</script>
+</body>
+</html>
